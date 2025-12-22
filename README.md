@@ -73,40 +73,6 @@ curl http://localhost:3001/health
 | **Code Quality** | 🆕 ESLint compliant, TypeScript strict mode, 100% CI passing |
 | **API Validation** | 🆕 Verified against official YouTrack OpenAPI 3.0.1 spec |
 
-### 🌟 New: Dynamic Configuration
-
-The MCP server now automatically adapts to your YouTrack customization! On startup, it:
-- ✅ Fetches your actual State values (e.g., "In Progress", "Code Review")
-- ✅ Loads your Priority values (e.g., "Critical", "High", "Medium")
-- ✅ Discovers your Issue Types (e.g., "Bug", "Feature", "Epic")
-- ✅ Generates accurate query examples that work with YOUR setup
-
-**No more errors** from AI assistants suggesting `"state: Open"` when your instance uses `"state: In Progress"`!
-
-See [Dynamic Configuration Documentation](docs/DYNAMIC_CONFIGURATION.md) for details.
-
----
-
-## What's New
-
-### 🎉 Production Ready (November 2025)
-
-The YouTrack MCP Server has reached **v1.0.0 production status** with:
-
-- ✅ **100% ESLint Compliant** - All code quality checks passing (Nov 22, 2025)
-- ✅ **OpenAPI Validated** - Verified against official YouTrack 2025.2 spec (Nov 22, 2025)
-- ✅ **Dynamic Configuration** - Auto-loads YOUR field values on startup (Nov 19, 2025)
-- ✅ **Multi-Project Support** - Secure project scoping (Nov 10, 2025)
-- ✅ **80% API Coverage** - 12 of 15 YouTrack domain areas implemented
-
-**Recent Fixes**:
-- Fixed all 26 ESLint violations across test suites and API clients
-- Validated all endpoints against official OpenAPI 3.0.1 specification
-- Corrected URL format handling (server now adds `/api` automatically)
-- Resolved dynamic config loader field fetching with three-tier strategy
-
-📄 **[Read Full Release Notes](docs/RELEASE_NOTES.md)** for detailed changelog and migration guide.
-
 ---
 
 ## Environment & Configuration
