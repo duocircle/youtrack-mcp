@@ -10,6 +10,8 @@
 
 </div>
 
+> **Fork Note:** This fork was uploaded by Brad on January 15th, 2025. It is used on his local machine to create and update tickets using Claude and Claude Code.
+
 > Enterprise‑grade MCP server for JetBrains **YouTrack 2025.2** giving AI assistants (Claude, VSCode MCP extensions, Continue.dev, Cline, Zed, custom connectors) safe, tool-based access to issues, sprints, dependencies (Gantt + critical path), time tracking and knowledge base content. Fully validated against official OpenAPI specification.
 
 ---
