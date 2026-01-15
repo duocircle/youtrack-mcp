@@ -114,7 +114,7 @@ export class AgileAPIClient extends BaseAPIClient {
       }
 
       const board = await this.get<AgileBoard>(
-        `/agiles/${params.boardId}`,
+        `/api/agiles/${params.boardId}`,
         { fields: fieldsParam }
       );
 
@@ -161,7 +161,7 @@ export class AgileAPIClient extends BaseAPIClient {
       }
 
       const response = await this.post(
-        `/agiles/${params.boardId}/sprints`,
+        `/api/agiles/${params.boardId}/sprints`,
         sprintData
       );
 

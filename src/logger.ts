@@ -25,22 +25,8 @@ export const logger = winston.createLogger({
   defaultMeta: { service: 'youtrack-mcp' },
   transports: [
     new winston.transports.File({ filename: 'error.log', level: 'error' }),
-    new winston.transports.File({ filename: 'combined.log' }),
-    new winston.transports.Console({
-      stderrLevels: ['error'],
-      // Explicitly disable colors
-      format: winston.format.combine(
-        winston.format.uncolorize(),
-        winston.format.printf(({ timestamp, level, message, ...meta }) => {
-          return JSON.stringify({
-            timestamp,
-            level,
-            message,
-            ...meta
-          });
-        })
-      )
-    })
+    new winston.transports.File({ filename: 'combined.log' })
+    // Removed Console transport - MCP servers must not write to stdout/stderr
   ],
 });
 

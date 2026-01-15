@@ -16,6 +16,7 @@ import { ClientFactory } from './api/client.js';
 import { ConfigManager } from './config.js';
 import { logger } from './logger.js';
 import { NotificationManager } from './notifications/notification-manager.js';
+import { ResponseFormatter } from './api/base/response-formatter.js';
 import { 
   ParameterValidator, 
   ValidationError, 
@@ -809,13 +810,64 @@ class YouTrackMCPServer {
       case 'boards':
         return await client.agile.listAgileBoards({ projectId });
       case 'board_details':
-        return await client.agile.getBoardDetails(boardId, true, true);
+        return await client.agile.getBoardDetails({ 
+          boardId, 
+          includeColumns: true, 
+          includeSprints: true 
+        });
       case 'sprints':
-        return await client.agile.listSprints(boardId, false, false);
+        const boardDetailsForSprints = await client.agile.getBoardDetails({ 
+          boardId, 
+          includeSprints: true 
+        });
+        // Extract and format just the sprints from the board details
+        if (boardDetailsForSprints.content && boardDetailsForSprints.content.board) {
+          const sprints = boardDetailsForSprints.content.board.sprints || [];
+          return {
+            ...boardDetailsForSprints,
+            content: sprints,
+            meta: {
+              ...boardDetailsForSprints.meta,
+              totalCount: sprints.length,
+              type: 'sprint'
+            }
+          };
+        }
+        return boardDetailsForSprints;
       case 'sprint_details':
-        return await client.agile.getSprintDetails(boardId, sprintId, true);
+        // Get board details with sprints and find the specific sprint
+        const boardDetailsForSprint = await client.agile.getBoardDetails({ 
+          boardId, 
+          includeSprints: true 
+        });
+        if (boardDetailsForSprint.content && boardDetailsForSprint.content.board) {
+          const sprint = boardDetailsForSprint.content.board.sprints?.find(
+            (s: any) => s.id === sprintId
+          );
+          if (sprint) {
+            return {
+              ...boardDetailsForSprint,
+              content: sprint,
+              meta: {
+                ...boardDetailsForSprint.meta,
+                message: `Retrieved details for sprint: ${sprint.name}`,
+                type: 'sprint'
+              }
+            };
+          }
+          return ResponseFormatter.formatError(
+            `Sprint ${sprintId} not found in board ${boardId}`,
+            { method: 'sprint_details', boardId, sprintId }
+          );
+        }
+        return boardDetailsForSprint;
       case 'create_sprint':
-        return await client.agile.createSprint(boardId, name, start, finish);
+        return await client.agile.createSprint({ 
+          boardId, 
+          name, 
+          start, 
+          finish 
+        });
       case 'assign_issue':
         return await client.agile.assignIssueToSprint(issueId, sprintId, boardId);
       default:
