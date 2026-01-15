@@ -1,5 +1,7 @@
 import { MCPResponse } from './base-client.js';
 
+export type { MCPResponse };
+
 export interface ResponseMetadata {
   cached?: boolean;
   timestamp?: string;
@@ -212,7 +214,7 @@ export class ResponseFormatter {
           text: JSON.stringify(content, null, 2)
         }]
       };
-    } catch (error) {
+  } catch {
       // If parsing fails, return original response
       return response;
     }

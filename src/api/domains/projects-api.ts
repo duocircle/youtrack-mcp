@@ -1,5 +1,6 @@
 import { BaseAPIClient, MCPResponse } from '../base/base-client.js';
 import { ResponseFormatter } from '../base/response-formatter.js';
+import { ProjectFields } from '../field-configurations.js';
 
 export interface ProjectTimeTrackingSettings {
   enabled: boolean;
@@ -35,34 +36,47 @@ export class ProjectsAPIClient extends BaseAPIClient {
   /**
    * List all accessible projects
    */
-  async listProjects(fields: string = 'id,name,shortName,description'): Promise<MCPResponse> {
+  async listProjects(fields?: string): Promise<MCPResponse> {
     try {
-      // Use issues endpoint approach for reliable project discovery
-      const params = { 
-        query: 'project: *',
-        fields: `project(${fields})`,
-        '$top': 100
-      };
-      
-      const response = await this.get('/api/issues', params);
-      
-      // Extract unique projects from issues
-      const projectMap = new Map();
-      if (response.data && Array.isArray(response.data)) {
-        response.data.forEach((issue: any) => {
-          if (issue.project) {
-            projectMap.set(issue.project.id, issue.project);
+      // Use the correct endpoint from OpenAPI spec
+      const params = {
+        fields: fields || ProjectFields.LIST, // Use optimized list fields
+        $top: 1000,
+        $skip: 0
+      } as any;
+
+      const projectsResp = await this.get('/admin/projects', params);
+      let projects = Array.isArray(projectsResp.data) ? projectsResp.data : [];
+
+      // Fallback: union with issue-derived discovery if projects endpoint is restricted
+      if (!projects.length) {
+        try {
+          const altParams = { 
+            query: 'project: *',
+            fields: `project(${fields})`,
+            $top: 1000
+          };
+          const issuesResp = await this.get('/issues', altParams);
+          const projectMap = new Map<string, any>();
+          if (Array.isArray(issuesResp.data)) {
+            for (const issue of issuesResp.data) {
+              if (issue.project) projectMap.set(issue.project.id, issue.project);
+            }
           }
-        });
+          projects = Array.from(projectMap.values());
+        } catch {
+          // ignore fallback failures; we'll proceed with what we have
+        }
       }
-      
-      const projects = Array.from(projectMap.values());
-      return ResponseFormatter.formatSuccess(projects, `Retrieved ${projects.length} accessible projects`);
+
+      return ResponseFormatter.formatSuccess(
+        projects,
+        `Retrieved ${projects.length} accessible projects`,
+      );
     } catch (error) {
       return ResponseFormatter.formatError(
-        error instanceof Error ? error.message : String(error), 
-        'Failed to list projects', 
-        { source: '/api/issues' }
+        `Failed to list projects: ${error instanceof Error ? error.message : String(error)}`,
+        error
       );
     }
   }
@@ -71,9 +85,9 @@ export class ProjectsAPIClient extends BaseAPIClient {
    * Get project details by ID or shortName
    */
   async getProject(projectId: string, fields?: string): Promise<MCPResponse> {
-    const endpoint = `/api/admin/projects/${projectId}`;
+    const endpoint = `/admin/projects/${projectId}`;
     const params = {
-      fields: fields || 'id,name,shortName,description,archived,leader(login,name),created,customFields(field(name,fieldType(presentation)))'
+      fields: fields || ProjectFields.DETAIL // Use detailed fields
     };
 
     const response = await this.get(endpoint, params);
@@ -84,7 +98,7 @@ export class ProjectsAPIClient extends BaseAPIClient {
    * Get project custom fields configuration
    */
   async getProjectCustomFields(projectId: string): Promise<MCPResponse> {
-    const endpoint = `/api/admin/projects/${projectId}/customFields`;
+    const endpoint = `/admin/projects/${projectId}/customFields`;
     const params = {
       fields: 'field(id,name,fieldType(presentation)),bundle(name),canBeEmpty,isPrivate,defaultValues'
     };
@@ -112,7 +126,7 @@ export class ProjectsAPIClient extends BaseAPIClient {
    * Add custom field to project
    */
   async addCustomFieldToProject(projectId: string, fieldSettings: ProjectFieldSettings): Promise<MCPResponse> {
-    const endpoint = `/api/admin/projects/${projectId}/customFields`;
+    const endpoint = `/admin/projects/${projectId}/customFields`;
     
     const fieldData = {
       field: {
@@ -133,7 +147,7 @@ export class ProjectsAPIClient extends BaseAPIClient {
    * Remove custom field from project
    */
   async removeCustomFieldFromProject(projectId: string, fieldId: string): Promise<MCPResponse> {
-    const endpoint = `/api/admin/projects/${projectId}/customFields/${fieldId}`;
+    const endpoint = `/admin/projects/${projectId}/customFields/${fieldId}`;
     
     await this.delete(endpoint);
     return ResponseFormatter.formatDeleted(fieldId, 'Project Field');
@@ -143,7 +157,7 @@ export class ProjectsAPIClient extends BaseAPIClient {
    * Get project time tracking settings
    */
   async getProjectTimeTracking(projectId: string): Promise<MCPResponse> {
-    const endpoint = `/api/admin/projects/${projectId}/timeTrackingSettings`;
+    const endpoint = `/admin/projects/${projectId}/timeTrackingSettings`;
     const params = {
       fields: 'enabled,estimate(field(name),period(presentation)),timeSpent(field(name),period(presentation))'
     };
@@ -158,7 +172,7 @@ export class ProjectsAPIClient extends BaseAPIClient {
    * Update project time tracking settings
    */
   async updateProjectTimeTracking(projectId: string, settings: ProjectTimeTrackingSettings): Promise<MCPResponse> {
-    const endpoint = `/api/admin/projects/${projectId}/timeTrackingSettings`;
+    const endpoint = `/admin/projects/${projectId}/timeTrackingSettings`;
     
     const updateData = {
       enabled: settings.enabled,
@@ -181,7 +195,7 @@ export class ProjectsAPIClient extends BaseAPIClient {
    * Get project team members
    */
   async getProjectTeam(projectId: string): Promise<MCPResponse> {
-    const endpoint = `/api/admin/projects/${projectId}/team`;
+    const endpoint = `/admin/projects/${projectId}/team`;
     const params = {
       fields: 'users(id,login,fullName,email,profiles(general(timezone))),groups(name,description,userCount)'
     };
@@ -205,7 +219,7 @@ export class ProjectsAPIClient extends BaseAPIClient {
    * Add user to project team
    */
   async addUserToProjectTeam(projectId: string, userId: string, role?: string): Promise<MCPResponse> {
-    const endpoint = `/api/admin/projects/${projectId}/team/users`;
+    const endpoint = `/admin/projects/${projectId}/team/users`;
     
     const userData = {
       user: { id: userId },
@@ -221,7 +235,7 @@ export class ProjectsAPIClient extends BaseAPIClient {
    * Remove user from project team
    */
   async removeUserFromProjectTeam(projectId: string, userId: string): Promise<MCPResponse> {
-    const endpoint = `/api/admin/projects/${projectId}/team/users/${userId}`;
+    const endpoint = `/admin/projects/${projectId}/team/users/${userId}`;
     
     await this.delete(endpoint);
     return ResponseFormatter.formatDeleted(userId, 'Team Member');
@@ -233,7 +247,7 @@ export class ProjectsAPIClient extends BaseAPIClient {
   async getProjectIssuesSummary(projectId: string): Promise<MCPResponse> {
     try {
       // First get project details to get the shortName
-      const projectEndpoint = `/api/admin/projects/${projectId}`;
+      const projectEndpoint = `/admin/projects/${projectId}`;
       const projectParams = { fields: 'id,shortName,name' };
       const projectResponse = await this.get(projectEndpoint, projectParams);
       
@@ -243,7 +257,7 @@ export class ProjectsAPIClient extends BaseAPIClient {
       
       const shortName = projectResponse.data.shortName;
       
-      const endpoint = `/api/issues`;
+      const endpoint = `/issues`;
       const params = {
         query: `project: ${shortName}`,
         fields: 'id,numberInProject,summary,state(name),priority(name),assignee(login),created,updated',
@@ -282,7 +296,7 @@ export class ProjectsAPIClient extends BaseAPIClient {
    * Get project versions/builds
    */
   async getProjectVersions(projectId: string): Promise<MCPResponse> {
-    const endpoint = `/api/admin/projects/${projectId}/versions`;
+    const endpoint = `/admin/projects/${projectId}/versions`;
     const params = {
       fields: 'id,name,description,released,releaseDate,archived'
     };
@@ -313,7 +327,7 @@ export class ProjectsAPIClient extends BaseAPIClient {
     releaseDate?: string;
     released?: boolean;
   }): Promise<MCPResponse> {
-    const endpoint = `/api/admin/projects/${projectId}/versions`;
+    const endpoint = `/admin/projects/${projectId}/versions`;
     
     const versionData = {
       name: version.name,
@@ -332,7 +346,7 @@ export class ProjectsAPIClient extends BaseAPIClient {
    * Archive/unarchive project version
    */
   async archiveProjectVersion(projectId: string, versionId: string, archived: boolean = true): Promise<MCPResponse> {
-    const endpoint = `/api/admin/projects/${projectId}/versions/${versionId}`;
+    const endpoint = `/admin/projects/${projectId}/versions/${versionId}`;
     
     const updateData = { archived };
     const response = await this.post(endpoint, updateData);
@@ -365,7 +379,7 @@ export class ProjectsAPIClient extends BaseAPIClient {
    */
   async validateProject(projectId: string): Promise<MCPResponse> {
     try {
-      const result = await this.getProject(projectId);
+      await this.getProject(projectId);
       return ResponseFormatter.formatSuccess(
         { valid: true, accessible: true }, 
         `Project ${projectId} is valid and accessible`
@@ -382,7 +396,7 @@ export class ProjectsAPIClient extends BaseAPIClient {
   /**
    * Get project statistics 
    */
-  async getProjectStatistics(projectId: string, _startDate?: string, _endDate?: string, _includeDetailed: boolean = false): Promise<MCPResponse> {
+  async getProjectStatistics(projectId: string): Promise<MCPResponse> {
     try {
       // Use project summary to get basic stats
       const summary = await this.getProjectIssuesSummary(projectId);
@@ -402,7 +416,7 @@ export class ProjectsAPIClient extends BaseAPIClient {
   async getProjectFieldValues(projectId: string, fieldName: string): Promise<MCPResponse> {
     try {
       // First get the custom field configuration
-      const fieldsEndpoint = `/api/admin/projects/${projectId}/customFields`;
+      const fieldsEndpoint = `/admin/projects/${projectId}/customFields`;
       const fieldsResponse = await this.get(fieldsEndpoint, {
         fields: 'field(name,fieldType(valueType)),bundle(id,name)'
       });
@@ -420,7 +434,7 @@ export class ProjectsAPIClient extends BaseAPIClient {
       // If field has a bundle, get bundle values
       if (targetField.bundle?.id) {
         const bundleType = targetField.field.fieldType?.valueType || 'enum';
-        const bundleEndpoint = `/api/admin/customFieldSettings/bundles/${bundleType}/${targetField.bundle.id}/values`;
+        const bundleEndpoint = `/admin/customFieldSettings/bundles/${bundleType}/${targetField.bundle.id}/values`;
         
         const valuesResponse = await this.get(bundleEndpoint, {
           fields: 'id,name,description,ordinal,color(background,foreground)'
