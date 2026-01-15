@@ -110,3 +110,6 @@ package-lock.json
 test-results/
 coverage/
 .jest/
+
+# Claude Code local settings (may contain credentials)
+.claude/

@@ -86,3 +86,37 @@ Environment variables:
 3. **Error Handling**: Always use the error handler from `src/api/base/error-handler.ts` for consistent MCP error responses
 
 4. **Caching**: Intelligent caching is built into `BaseAPIClient` - respect cache settings and TTL configurations
+
+## Repository Management
+
+This is a fork of `itsalfredakku/youtrack-mcp` with local customizations.
+
+### Git Remotes
+
+- `origin` → Our fork: `https://github.com/duocircle/youtrack-mcp`
+- `upstream` → Original repo: `https://github.com/itsalfredakku/youtrack-mcp`
+
+### Syncing with Upstream
+
+```bash
+# Fetch latest from upstream
+git fetch upstream
+
+# Merge upstream changes into current branch
+git merge upstream/main
+
+# Push to our fork
+git push origin dev
+```
+
+### Branch Strategy
+
+- `dev` - Our development branch with local customizations
+- `main` - Synced with upstream main (on our fork)
+
+### Security Notes
+
+- **Never commit credentials** - `.env` and `.claude/` are gitignored
+- Local settings in `.claude/settings.local.json` contain credentials - keep them local only
+- Run `npm audit` periodically to check for vulnerabilities
+- Fix vulnerabilities with `npm audit fix` or `npm audit fix --force` for breaking changes
